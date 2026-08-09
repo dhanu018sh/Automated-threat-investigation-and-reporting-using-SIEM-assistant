@@ -1,0 +1,31 @@
+{% extends "base.html.j2" %}
+
+{% block content %}
+<h2>Executive Summary</h2>
+<p><strong>Title:</strong> {{ title }}</p>
+<p><strong>Severity:</strong> <span class="badge {{ severity|lower }}">{{ severity }}</span></p>
+<p><strong>Date:</strong> {{ date }}</p>
+
+<h2>Findings</h2>
+<table>
+    <tr><th>Description</th><th>Details</th></tr>
+    {% for finding in findings %}
+    <tr>
+        <td>{{ finding.description }}</td>
+        <td>{{ finding.details }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<h2>MITRE ATT&CK Map</h2>
+<table>
+    <tr><th>Tactic</th><th>Technique ID</th><th>Technique Name</th></tr>
+    {% for technique in mitre_techniques %}
+    <tr>
+        <td>{{ technique.tactic }}</td>
+        <td>{{ technique.id }}</td>
+        <td>{{ technique.name }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

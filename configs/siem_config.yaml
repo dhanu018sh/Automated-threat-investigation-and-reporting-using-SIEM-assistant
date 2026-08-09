@@ -1,0 +1,98 @@
+# SIEM Assistant — SIEM Connection Configuration
+# Edit this file to configure your SIEM platform connections.
+
+default_platform: mock
+
+platforms:
+
+  # ── Mock SIEM (Default — works without any real SIEM) ────────────────────
+  mock:
+    enabled: true
+    description: "Simulated SIEM with realistic synthetic security events"
+    event_count: 1000
+    latency_ms: 100   # Simulated query latency
+    error_rate: 0.02  # 2% simulated error rate for realism
+
+  # ── Elasticsearch / OpenSearch ────────────────────────────────────────────
+  elastic:
+    enabled: false
+    url: "${SIEM_URL}"
+    api_key: "${SIEM_API_TOKEN}"
+    # OR: basic auth
+    username: "${SIEM_USERNAME}"
+    password: "${SIEM_PASSWORD}"
+    verify_ssl: true
+    index_patterns:
+      - "logs-*"
+      - "security-*"
+      - ".siem-signals-*"
+      - "auditbeat-*"
+      - "winlogbeat-*"
+    timeout_seconds: 30
+    max_results: 10000
+
+  # ── Splunk ────────────────────────────────────────────────────────────────
+  splunk:
+    enabled: false
+    url: "${SIEM_URL}"
+    username: "${SIEM_USERNAME}"
+    password: "${SIEM_PASSWORD}"
+    app: "search"
+    default_index: "main"
+    additional_indexes:
+      - "security"
+      - "wineventlog"
+      - "syslog"
+    timeout_seconds: 60
+    max_results: 50000
+    verify_ssl: true
+
+  # ── Microsoft Sentinel ────────────────────────────────────────────────────
+  sentinel:
+    enabled: false
+    tenant_id: "${AZURE_TENANT_ID}"
+    client_id: "${AZURE_CLIENT_ID}"
+    client_secret: "${AZURE_CLIENT_SECRET}"
+    workspace_id: "${SENTINEL_WORKSPACE_ID}"
+    subscription_id: "${SENTINEL_SUBSCRIPTION_ID}"
+    resource_group: "${SENTINEL_RESOURCE_GROUP}"
+    timeout_seconds: 60
+
+  # ── IBM QRadar ────────────────────────────────────────────────────────────
+  qradar:
+    enabled: false
+    url: "${SIEM_URL}"
+    sec_token: "${QRADAR_SEC_TOKEN}"
+    verify_ssl: false
+    timeout_seconds: 60
+
+  # ── Wazuh ─────────────────────────────────────────────────────────────────
+  wazuh:
+    enabled: false
+    url: "${SIEM_URL}"
+    username: "${SIEM_USERNAME}"
+    password: "${SIEM_PASSWORD}"
+    verify_ssl: false
+    timeout_seconds: 30
+    default_limit: 100
+
+# ── Query Settings ────────────────────────────────────────────────────────────
+query_settings:
+  max_results_default: 100
+  max_results_limit: 10000
+  default_time_range: "now-24h"
+  query_timeout_seconds: 60
+  cache_results: true
+  cache_ttl_seconds: 300
+
+# ── Rate Limiting ─────────────────────────────────────────────────────────────
+rate_limiting:
+  analyst:
+    queries_per_minute: 10
+    max_result_size: 1000
+  senior_analyst:
+    queries_per_minute: 30
+    max_result_size: 5000
+  soc_manager:
+    queries_per_minute: 100
+    max_result_size: 10000

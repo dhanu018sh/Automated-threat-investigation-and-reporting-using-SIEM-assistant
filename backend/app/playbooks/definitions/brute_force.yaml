@@ -1,0 +1,118 @@
+name: brute_force_investigation
+version: "1.0"
+description: "Automated brute force / credential stuffing attack investigation"
+trigger:
+  keywords:
+    - brute force
+    - failed login
+    - password attack
+    - credential stuffing
+    - login failure
+    - authentication failure
+    - failed authentication
+
+mitre_techniques:
+  - technique_id: "T1110"
+    technique_name: "Brute Force"
+    tactic: "Credential Access"
+  - technique_id: "T1110.001"
+    technique_name: "Password Guessing"
+    tactic: "Credential Access"
+  - technique_id: "T1110.004"
+    technique_name: "Credential Stuffing"
+    tactic: "Credential Access"
+  - technique_id: "T1078"
+    technique_name: "Valid Accounts"
+    tactic: "Defense Evasion"
+
+nodes:
+  - id: find_failed_logins
+    type: siem_query
+    name: "Find Failed Login Attempts"
+    query_template: "brute force failed login authentication failure"
+    description: "Search for authentication failures exceeding threshold"
+
+  - id: check_source_reputation
+    type: enrich_ip
+    name: "Check Source IP Reputation"
+    depends_on: [find_failed_logins]
+    description: "Check attacker IP against threat intelligence"
+
+  - id: check_successful_logins
+    type: siem_query
+    name: "Check Successful Logins After Failures"
+    query_template: "successful login authentication success after failed attempts"
+    depends_on: [find_failed_logins]
+    description: "Detect successful logins that follow failure pattern (credential stuffing)"
+
+  - id: check_account_lockout
+    type: siem_query
+    name: "Check Account Lockout Status"
+    query_template: "account locked disabled lockout status"
+    depends_on: [find_failed_logins]
+    description: "Check if targeted accounts are locked"
+
+  - id: correlate_user_activity
+    type: siem_query
+    name: "Correlate Post-Auth User Activity"
+    query_template: "user activity after successful login suspicious commands"
+    depends_on: [check_successful_logins]
+    description: "If accounts were compromised, look for post-auth malicious activity"
+
+  - id: assess_severity
+    type: condition
+    name: "Assess Attack Severity"
+    depends_on: [check_source_reputation, check_successful_logins, check_account_lockout]
+    conditions:
+      - if: "check_successful_logins_count > 0"
+        then:
+          severity: "CRITICAL"
+          finding: "CRITICAL: Brute force attack resulted in successful account compromise. Attacker achieved valid authentication following multiple failed attempts — indicating credential stuffing or successful password guessing. Immediate containment required."
+          recommended_actions:
+            - "IMMEDIATELY reset passwords for compromised accounts"
+            - "Force logout all active sessions for affected users"
+            - "Enable MFA for all affected accounts"
+            - "Block attacker IP at perimeter firewall"
+            - "Review all actions taken under compromised account"
+            - "Check for data exfiltration or privilege escalation"
+            - "Notify affected users and management"
+          requires_approval: true
+      - if: "find_failed_logins_count > 0"
+        then:
+          severity: "HIGH"
+          finding: "High-volume brute force attack detected. No successful logins confirmed, but attack is ongoing. Source IP has high abuse confidence score. Targeted accounts should be reviewed."
+          recommended_actions:
+            - "Block source IP at perimeter firewall"
+            - "Enable account lockout policy if not active"
+            - "Notify targeted users to change passwords"
+            - "Enable MFA for targeted accounts"
+            - "Monitor for additional attack attempts"
+          requires_approval: false
+      - else:
+          severity: "LOW"
+          finding: "Low-level authentication failures detected. Below threshold for active brute force."
+          recommended_actions:
+            - "Continue monitoring login failure rates"
+
+  - id: generate_findings
+    type: generate_finding
+    name: "Generate Investigation Findings"
+    depends_on: [assess_severity]
+
+edges:
+  - from: find_failed_logins
+    to: check_source_reputation
+  - from: find_failed_logins
+    to: check_successful_logins
+  - from: find_failed_logins
+    to: check_account_lockout
+  - from: check_successful_logins
+    to: correlate_user_activity
+  - from: check_source_reputation
+    to: assess_severity
+  - from: check_successful_logins
+    to: assess_severity
+  - from: check_account_lockout
+    to: assess_severity
+  - from: assess_severity
+    to: generate_findings

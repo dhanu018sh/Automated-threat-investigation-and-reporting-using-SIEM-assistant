@@ -1,0 +1,105 @@
+name: phishing_investigation
+version: "1.0"
+description: "Automated phishing email investigation playbook"
+trigger:
+  keywords:
+    - phishing
+    - suspicious email
+    - malicious link
+    - spear phishing
+    - phishing attack
+    - suspicious attachment
+
+mitre_techniques:
+  - technique_id: "T1566"
+    technique_name: "Phishing"
+    tactic: "Initial Access"
+  - technique_id: "T1566.001"
+    technique_name: "Spearphishing Attachment"
+    tactic: "Initial Access"
+
+parameters:
+  - name: sender_domain
+    type: string
+    description: "Suspicious sender domain to investigate"
+
+nodes:
+  - id: find_phishing_emails
+    type: siem_query
+    name: "Find Phishing Emails"
+    query_template: "phishing suspicious email sender domain"
+    description: "Search for phishing emails in mail logs"
+
+  - id: check_sender_reputation
+    type: enrich_ip
+    name: "Check Sender IP Reputation"
+    depends_on: [find_phishing_emails]
+    description: "Check AbuseIPDB and VirusTotal for sender IP"
+
+  - id: analyze_urls
+    type: siem_query
+    name: "Analyze Embedded URLs"
+    query_template: "suspicious url click tracking phishing link"
+    depends_on: [find_phishing_emails]
+    description: "Find click-throughs on phishing links"
+
+  - id: find_affected_users
+    type: siem_query
+    name: "Find Affected Recipients"
+    query_template: "email received user clicked malicious link"
+    depends_on: [find_phishing_emails]
+    description: "Identify users who received/clicked phishing email"
+
+  - id: check_post_click_activity
+    type: siem_query
+    name: "Check Post-Click Activity"
+    query_template: "credential submission login after email click"
+    depends_on: [find_affected_users]
+    description: "Look for credential harvesting after phishing click"
+
+  - id: assess_impact
+    type: condition
+    name: "Assess Impact"
+    depends_on: [check_sender_reputation, analyze_urls, check_post_click_activity]
+    conditions:
+      - if: "find_phishing_emails_count > 0"
+        then:
+          severity: "HIGH"
+          finding: "Active phishing campaign detected. Multiple recipients targeted with malicious emails containing credential harvesting links. Sender domain flagged as malicious."
+          recommended_actions:
+            - "Block sender domain at email gateway immediately"
+            - "Quarantine all emails from the sender domain"
+            - "Notify all recipients to not click any links"
+            - "Reset passwords for any users who clicked links"
+            - "Enable MFA for affected accounts"
+            - "Check for data exfiltration from compromised accounts"
+          requires_approval: false
+      - else:
+          severity: "LOW"
+          finding: "No active phishing campaign found in the specified timeframe."
+          recommended_actions:
+            - "Continue monitoring email logs"
+
+  - id: generate_findings
+    type: generate_finding
+    name: "Generate Investigation Findings"
+    depends_on: [assess_impact]
+    description: "Compile all findings into structured report"
+
+edges:
+  - from: find_phishing_emails
+    to: check_sender_reputation
+  - from: find_phishing_emails
+    to: analyze_urls
+  - from: find_phishing_emails
+    to: find_affected_users
+  - from: find_affected_users
+    to: check_post_click_activity
+  - from: check_sender_reputation
+    to: assess_impact
+  - from: analyze_urls
+    to: assess_impact
+  - from: check_post_click_activity
+    to: assess_impact
+  - from: assess_impact
+    to: generate_findings

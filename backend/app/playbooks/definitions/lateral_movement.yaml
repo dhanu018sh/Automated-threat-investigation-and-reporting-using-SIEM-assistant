@@ -1,0 +1,143 @@
+name: lateral_movement
+version: "1.0"
+description: "Automated lateral movement detection and investigation"
+trigger:
+  keywords:
+    - lateral movement
+    - lateral movement detection
+    - east west traffic
+    - SMB
+    - pass the hash
+    - PsExec
+    - WMI remote
+    - RDP internal
+    - pivoting
+    - host hopping
+
+mitre_techniques:
+  - technique_id: "T1021"
+    technique_name: "Remote Services"
+    tactic: "Lateral Movement"
+  - technique_id: "T1021.002"
+    technique_name: "SMB/Windows Admin Shares"
+    tactic: "Lateral Movement"
+  - technique_id: "T1021.001"
+    technique_name: "Remote Desktop Protocol"
+    tactic: "Lateral Movement"
+  - technique_id: "T1550.002"
+    technique_name: "Pass the Hash"
+    tactic: "Lateral Movement"
+  - technique_id: "T1078"
+    technique_name: "Valid Accounts"
+    tactic: "Defense Evasion"
+
+nodes:
+  - id: find_lateral_connections
+    type: siem_query
+    name: "Detect Internal Lateral Connections"
+    query_template: "lateral movement smb rdp wmi internal host connection"
+    description: "Find unusual internal connections between hosts"
+
+  - id: map_source_host
+    type: siem_query
+    name: "Profile Source Host"
+    query_template: "hostname source host activity authentication history"
+    depends_on: [find_lateral_connections]
+    description: "Build profile of the source host behavior"
+
+  - id: check_credential_reuse
+    type: siem_query
+    name: "Check Credential Reuse / PTH"
+    query_template: "NTLM authentication pass the hash credential reuse lateral"
+    depends_on: [find_lateral_connections]
+    description: "Look for pass-the-hash or credential reuse patterns"
+
+  - id: check_admin_share_access
+    type: siem_query
+    name: "Check Admin Share Access"
+    query_template: "ADMIN$ C$ IPC$ admin share SMB administrative"
+    depends_on: [find_lateral_connections]
+    description: "Detect abuse of Windows administrative shares"
+
+  - id: check_time_anomaly
+    type: siem_query
+    name: "Check Time-of-Day Anomaly"
+    query_template: "after hours access login unusual time anomalous"
+    depends_on: [find_lateral_connections]
+    description: "Check if lateral movement occurred outside business hours"
+
+  - id: check_destination_sensitivity
+    type: siem_query
+    name: "Check Target Host Sensitivity"
+    query_template: "domain controller database server sensitive host critical system"
+    depends_on: [find_lateral_connections]
+    description: "Determine if attacker reached sensitive/critical systems"
+
+  - id: check_source_ip_reputation
+    type: enrich_ip
+    name: "Enrich Source IP"
+    depends_on: [find_lateral_connections]
+    description: "Threat intel check on movement source"
+
+  - id: assess_severity
+    type: condition
+    name: "Assess Lateral Movement Severity"
+    depends_on: [check_credential_reuse, check_destination_sensitivity, check_time_anomaly]
+    conditions:
+      - if: "check_destination_sensitivity_count > 0"
+        then:
+          severity: "CRITICAL"
+          finding: "CRITICAL: Lateral movement has reached sensitive/critical systems including Domain Controllers or Database servers. Attacker has potentially achieved domain-wide access. This is an advanced threat actor exhibiting APT behavior."
+          recommended_actions:
+            - "Immediately contain affected systems"
+            - "Reset all domain admin credentials"
+            - "Force re-authentication across the domain"
+            - "Check Domain Controller event logs for privilege escalation"
+            - "Review all Group Policy changes in last 72h"
+            - "Activate incident response team"
+            - "Consider emergency forest recovery procedures"
+          requires_approval: true
+      - if: "find_lateral_connections_count > 0"
+        then:
+          severity: "HIGH"
+          finding: "Lateral movement detected across internal network. Attacker is pivoting between hosts using legitimate credentials or pass-the-hash technique. Multiple hosts may be compromised."
+          recommended_actions:
+            - "Isolate the source host from the network"
+            - "Rotate credentials for affected user accounts"
+            - "Enable SMB signing across the domain"
+            - "Check destination hosts for indicators of compromise"
+            - "Review access logs on destination hosts"
+          requires_approval: false
+      - else:
+          severity: "MEDIUM"
+          finding: "Suspicious internal traffic detected. Manual review recommended."
+          recommended_actions:
+            - "Review internal connection logs"
+            - "Validate with asset owners"
+
+  - id: generate_findings
+    type: generate_finding
+    name: "Generate Investigation Findings"
+    depends_on: [assess_severity]
+
+edges:
+  - from: find_lateral_connections
+    to: map_source_host
+  - from: find_lateral_connections
+    to: check_credential_reuse
+  - from: find_lateral_connections
+    to: check_admin_share_access
+  - from: find_lateral_connections
+    to: check_time_anomaly
+  - from: find_lateral_connections
+    to: check_destination_sensitivity
+  - from: find_lateral_connections
+    to: check_source_ip_reputation
+  - from: check_credential_reuse
+    to: assess_severity
+  - from: check_destination_sensitivity
+    to: assess_severity
+  - from: check_time_anomaly
+    to: assess_severity
+  - from: assess_severity
+    to: generate_findings

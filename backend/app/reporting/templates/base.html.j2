@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; }
+        header { background: #1a202c; color: white; padding: 20px; text-align: center; }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1, h2, h3 { color: #2d3748; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; }
+        th { background: #edf2f7; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+        .critical { background: #fed7d7; color: #c53030; }
+        .high { background: #feebc8; color: #c05621; }
+        .medium { background: #fefcbf; color: #b7791f; }
+        .low { background: #e2e8f0; color: #4a5568; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>SIEM Investigation Report</h1>
+    </header>
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>
