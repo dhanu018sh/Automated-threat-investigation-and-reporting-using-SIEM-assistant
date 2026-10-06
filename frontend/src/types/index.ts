@@ -123,6 +123,7 @@ export interface Message {
   timestamp: string | Date;
   events?: WSEvent[];
   rf_predictions?: RFPrediction;
+  iocs?: IOC[];
   isStreaming?: boolean;
 }
 
@@ -144,11 +145,14 @@ export interface Investigation {
   risk_score?: number;
   created_at: string;
   completed_at?: string;
-  findings?: string[];
+  findings?: any[];
   iocs?: IOC[];
   mitre_techniques?: MITRETechnique[];
   analyst?: string;
   rf_predictions?: RFPrediction;
+  attack_location?: string;
+  attack_system?: string;
+  attack_links?: { label: string; url: string }[];
 }
 
 export interface ReportItem {

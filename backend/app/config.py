@@ -15,13 +15,13 @@ class Settings(BaseSettings):
     ABUSEIPDB_API_KEY: str = ""
     SHODAN_API_KEY: str = ""
 
-    SIEM_PLATFORM: str = "mock"
+    SIEM_PLATFORM: str = "real"
     SIEM_URL: str = ""
     SIEM_USERNAME: str = ""
     SIEM_PASSWORD: str = ""
     SIEM_API_TOKEN: str = ""
 
-    USE_MOCK_DATA: bool = True
+    USE_MOCK_DATA: bool = False
 
     class Config:
         env_file = ".env"

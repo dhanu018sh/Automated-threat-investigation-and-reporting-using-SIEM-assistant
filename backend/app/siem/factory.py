@@ -1,4 +1,5 @@
 from .base import SIEMConnector
+from .real_system_adapter import RealSystemAdapter
 from .mock_adapter import MockAdapter
 from .elastic_adapter import ElasticAdapter
 from .splunk_adapter import SplunkAdapter
@@ -14,5 +15,8 @@ def get_siem_connector(platform: str) -> SIEMConnector:
         return SentinelAdapter()
     elif platform == "qradar":
         return QRadarAdapter()
-    else:
+    elif platform == "mock":
         return MockAdapter()
+    else:
+        # Default to REAL local system security inspector!
+        return RealSystemAdapter()

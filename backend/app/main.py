@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.future import select
 import logging
 from .database import create_all_tables, AsyncSessionLocal, User, RoleEnum
-from .api import chat, investigations, reports, auth
+from .api import chat, investigations, reports, auth, live_siem
 from .siem.factory import get_siem_connector
 from .config import settings
 from .auth.jwt_handler import get_password_hash
@@ -64,6 +64,7 @@ app.include_router(auth.router)
 app.include_router(chat.router)
 app.include_router(investigations.router)
 app.include_router(reports.router)
+app.include_router(live_siem.router)
 
 @app.get("/health")
 async def health_check():

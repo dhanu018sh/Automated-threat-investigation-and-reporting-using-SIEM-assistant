@@ -1,7 +1,10 @@
 # Python
 venv/
 .venv/
+**/venv/
+**/.venv/
 __pycache__/
+**/__pycache__/
 *.pyc
 *.pyo
 *.pyd
@@ -9,6 +12,7 @@ __pycache__/
 
 # Databases & Local Data
 *.db
+**/*.db
 *.sqlite3
 reports/
 *.log

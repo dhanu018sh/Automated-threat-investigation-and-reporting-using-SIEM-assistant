@@ -1,11 +1,13 @@
 import React from 'react';
-import { Shield, LayoutDashboard, MessageSquare, AlertTriangle, FileText, User, PlusCircle, LogOut } from 'lucide-react';
+import { Shield, LayoutDashboard, MessageSquare, AlertTriangle, FileText, User, PlusCircle, LogOut, RotateCcw, Trash2 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useChatStore } from '../store/chatStore';
+import { useReportStore } from '../store/reportStore';
 import { useAuthStore } from '../store/authStore';
 
 const Sidebar = () => {
-  const { conversations, activeConversationId, setActiveConversation, newConversation } = useChatStore();
+  const { conversations, activeConversationId, setActiveConversation, newConversation, clearAllChats, deleteConversation } = useChatStore();
+  const { clearAllReports } = useReportStore();
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
 
@@ -13,6 +15,15 @@ const Sidebar = () => {
     const id = newConversation();
     setActiveConversation(id);
     navigate('/chat');
+  };
+
+  const handleResetAll = () => {
+    if (window.confirm('Reset all chat history, investigation reports, and start fresh?')) {
+      clearAllChats();
+      clearAllReports();
+      localStorage.clear();
+      window.location.href = '/chat';
+    }
   };
 
   const handleLogout = () => {
@@ -90,34 +101,81 @@ const Sidebar = () => {
           {conversations.map((c) => (
             <div 
               key={c.id} 
-              onClick={() => {
-                setActiveConversation(c.id);
-                navigate('/chat');
-              }}
               style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
                 padding: '0.6rem 0.85rem', 
                 borderRadius: '6px', 
-                cursor: 'pointer',
                 background: activeConversationId === c.id ? 'rgba(0, 212, 255, 0.12)' : 'transparent',
                 color: activeConversationId === c.id ? 'var(--text-primary)' : 'var(--text-secondary)',
                 fontSize: '0.85rem',
                 borderLeft: activeConversationId === c.id ? '2px solid var(--accent-primary)' : '2px solid transparent',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
               }}
             >
-              💬 {c.title}
+              <div 
+                onClick={() => {
+                  setActiveConversation(c.id);
+                  navigate('/chat');
+                }}
+                style={{
+                  cursor: 'pointer',
+                  flex: 1,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  marginRight: '0.5rem'
+                }}
+              >
+                💬 {c.title}
+              </div>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteConversation(c.id);
+                }}
+                title="Delete Session"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  padding: '0.2rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  opacity: 0.7,
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#ff4757'}
+                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+              >
+                <Trash2 size={13} />
+              </button>
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Fresh Start Button */}
+      <div style={{ padding: '0.75rem 1rem' }}>
+        <button
+          onClick={handleResetAll}
+          style={{
+            width: '100%', padding: '0.5rem', fontSize: '0.8rem',
+            background: 'rgba(255,71,87,0.1)', border: '1px solid rgba(255,71,87,0.3)',
+            color: '#ff4757', borderRadius: '6px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+          }}
+        >
+          <RotateCcw size={14} /> Reset All & Start Fresh
+        </button>
       </div>
 
       {/* User Footer */}
       <div style={{ padding: '1.25rem 1rem', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
           <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 8px var(--success)' }} />
-          SIEM Platform Connected (Mock API)
+          SIEM Live Inspector Active
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

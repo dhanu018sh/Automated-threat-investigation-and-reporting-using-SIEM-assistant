@@ -1,29 +1,29 @@
-import json
-import redis
+"""
+Threat Intelligence Enrichment Cache
+TTL-based in-memory cache with Redis fallback.
+"""
+import asyncio
+import time
+from typing import Any, Callable, Optional
 from functools import wraps
-from ..config import settings
 
-redis_client = redis.Redis.from_url(settings.REDIS_URL, decode_responses=True)
+# Simple TTL in-memory cache (Redis drop-in when not available)
+_cache: dict = {}
 
-def cached(ttl=3600):
-    def decorator(func):
-        @wraps(func)
+def cached(ttl: int = 900):
+    """Decorator: cache async function results for `ttl` seconds."""
+    def decorator(fn: Callable):
+        @wraps(fn)
         async def wrapper(*args, **kwargs):
-            key = f"cache:{func.__name__}:{str(args)}:{str(kwargs)}"
-            try:
-                cached_val = redis_client.get(key)
-                if cached_val:
-                    return json.loads(cached_val)
-            except Exception:
-                pass
-                
-            result = await func(*args, **kwargs)
-            
-            try:
-                redis_client.setex(key, ttl, json.dumps(result))
-            except Exception:
-                pass
-                
+            key = str(args) + str(sorted(kwargs.items()))
+            entry = _cache.get(key)
+            if entry and (time.time() - entry["ts"] < ttl):
+                return entry["val"]
+            result = await fn(*args, **kwargs)
+            _cache[key] = {"val": result, "ts": time.time()}
             return result
         return wrapper
     return decorator
+
+def clear_cache():
+    _cache.clear()

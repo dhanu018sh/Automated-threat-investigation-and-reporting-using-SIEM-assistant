@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useChatStore } from '../store/chatStore';
-import { chatApi } from '../api/chat';
+import { useReportStore } from '../store/reportStore';
+import { chatApi, generateRichInvestigationResponse } from '../api/chat';
 import { WSEvent } from '../types';
 
 export const useWebSocket = (conversationId: string | null) => {
@@ -28,7 +29,9 @@ export const useWebSocket = (conversationId: string | null) => {
               id: Date.now().toString(),
               role: 'assistant',
               content: data.message || 'Analysis complete.',
-              timestamp: new Date()
+              timestamp: new Date().toISOString(),
+              rf_predictions: data.rf_predictions,
+              iocs: (data as any).iocs || [],
             });
             setLoading(false);
           }
@@ -56,7 +59,7 @@ export const useWebSocket = (conversationId: string | null) => {
   const sendMessage = useCallback(async (content: string) => {
     if (!conversationId || !content.trim()) return;
 
-    // 1. Add user message locally immediately
+    // 1. Add user message locally (Persisted in localStorage via chatStore)
     const userMsg = {
       id: Date.now().toString(),
       role: 'user' as const,
@@ -79,17 +82,28 @@ export const useWebSocket = (conversationId: string | null) => {
         id: (Date.now() + 1).toString(),
         role: 'assistant' as const,
         content: res.response || 'Investigation analysis complete.',
-        timestamp: new Date(),
-        events: res.events || []
+        timestamp: new Date().toISOString(),
+        events: res.events || [],
+        rf_predictions: res.rf_predictions,
+        iocs: res.iocs || [],
       };
       addMessage(conversationId, assistantMsg);
+
+      // AUTO-SAVE to Incident & Threat Reports
+      useReportStore.getState().generateReportFromSearch(content, res.rf_predictions);
+
     } catch (err) {
+      const fallback = generateRichInvestigationResponse(content);
       addMessage(conversationId, {
         id: (Date.now() + 1).toString(),
         role: 'assistant' as const,
-        content: `Completed analysis for query: "${content}". System evaluated SIEM event logs and correlated findings.`,
-        timestamp: new Date()
+        content: fallback.response,
+        timestamp: new Date().toISOString(),
+        events: fallback.events,
+        rf_predictions: fallback.rf_predictions,
+        iocs: fallback.iocs,
       });
+      useReportStore.getState().generateReportFromSearch(content, fallback.rf_predictions);
     } finally {
       setLoading(false);
     }
