@@ -27,28 +27,83 @@ SIEM Assistant is a production-ready conversational SIEM platform that integrate
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Docker & Docker Compose installed
-- 4GB RAM minimum
+### 📋 Prerequisites
+- **Python**: 3.10 or 3.11
+- **Node.js**: v18+ & **npm**
+- **Git**
+- *(Optional)*: Docker & Docker Compose (for containerized deployment)
 
-### 1-Minute Setup
+---
 
+### 💻 Method 1: Local Setup (Recommended for College Lab / Demo Systems)
+*No Docker or PostgreSQL required — the backend automatically initializes an embedded SQLite database (`siem.db`) and uses pre-trained Random Forest ML models out-of-the-box.*
+
+#### 1. Clone the Repository
 ```bash
-# Clone/navigate to project
-cd D:\antigravity\scratch\siem-assistant
+git clone https://github.com/dhanu018sh/Automated-threat-investigation-and-reporting-using-SIEM-assistant.git
+cd Automated-threat-investigation-and-reporting-using-SIEM-assistant
+```
 
+#### 2. Start Backend (Terminal 1)
+```bash
+cd backend
+
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# Windows (CMD):
+venv\Scripts\activate
+# Windows (PowerShell):
+.\venv\Scripts\Activate.ps1
+# Linux / macOS:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run FastAPI server
+uvicorn app.main:app --reload --port 8000
+```
+
+#### 3. Start Frontend (Terminal 2)
+```bash
+cd frontend
+
+# Install Node dependencies
+npm install
+
+# Start Vite dev server
+npm run dev
+```
+
+#### 4. Access the Application
+- **Frontend Web UI**: [http://localhost:5173](http://localhost:5173) (or [http://localhost:3000](http://localhost:3000))
+- **Interactive Swagger API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+**Default Demo Credentials (Auto-seeded on startup):**
+- **Analyst Role**: `analyst` / `analyst123`
+- **SOC Manager Role**: `manager` / `manager123`
+
+> [!TIP]
+> **PowerShell Execution Policy Error on Windows:**
+> If PowerShell shows `Running scripts is disabled on this system` when activating `venv`, run:
+> ```powershell
+> Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+> ```
+> Or use standard Command Prompt (`cmd.exe`) and run `venv\Scripts\activate.bat`.
+
+---
+
+### 🐳 Method 2: Docker Setup (Production / Containerized)
+```bash
 # Copy environment file
-copy .env.example .env
+cp .env.example .env   # On Windows: copy .env.example .env
 
-# Start all services
+# Start all microservices (FastAPI, React, PostgreSQL, Redis, Celery)
 docker compose up -d
 
-# Wait ~30 seconds for services to start
 # Open browser to http://localhost:3000
-
-# Login with demo credentials:
-# Username: analyst / Password: analyst123
-# Username: manager / Password: manager123
 ```
 
 ## 📁 Project Structure
