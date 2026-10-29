@@ -15,6 +15,7 @@ spacy
 pyyaml
 python-jose[cryptography]
 passlib[bcrypt]
+bcrypt==4.0.1
 jinja2
 weasyprint
 python-multipart
@@ -22,3 +23,7 @@ aiofiles
 structlog
 python-dotenv
 networkx
+scikit-learn
+numpy
+joblib
+aiosqlite
