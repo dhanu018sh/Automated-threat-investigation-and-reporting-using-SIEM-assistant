@@ -33,3 +33,16 @@ yarn-error.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Presentations, Posters & College Slides Scratch Scripts
+/*.pptx
+/*.ppt
+/*.pdf
+/*.png
+/ref_stream.txt
+/add_border_to_slide14.py
+/create_ppt.py
+/fix_slide16.py
+/generate_clean_phase2_pptx.py
+/inspect_details.py
+/inspect_ref.py
