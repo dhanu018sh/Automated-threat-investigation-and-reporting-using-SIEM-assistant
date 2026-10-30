@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Message, WSEvent } from '../types';
 import QueryViewer from './QueryViewer';
 import ReactMarkdown from 'react-markdown';
-import { Shield, User, MapPin, Link2, ExternalLink, Clock, FileText, CheckCircle2, Trash2 } from 'lucide-react';
+import { Shield, User, MapPin, Link2, ExternalLink, Clock, FileText, CheckCircle2, Trash2, Laptop, AlertTriangle, Radio } from 'lucide-react';
 import { useReportStore } from '../store/reportStore';
 import { useChatStore } from '../store/chatStore';
 import { useNavigate } from 'react-router-dom';
@@ -61,18 +61,37 @@ const buildAttackLinks = (rf: any, iocs: any[]) => {
 };
 
 /* ─── Helper: Build Attack Location Text ──────────────────────── */
-const buildAttackLocation = (iocs: any[], rf: any, timestamp?: string | Date) => {
-  const ip = iocs.find(i => i.type === 'ip')?.value || (rf?.threat_severity !== 'LOW' ? '185.220.101.34' : '127.0.0.1');
+const buildAttackLocation = (iocs: any[], rf: any, timestamp?: string | Date, evidence?: any) => {
+  const host = evidence?.target_host || (typeof localStorage !== 'undefined' ? localStorage.getItem('siem_detected_host') : null) || 'Local Host';
+  const osName = evidence?.target_os || (typeof localStorage !== 'undefined' ? localStorage.getItem('siem_detected_os') : null) || 'Windows System';
+  const ip = evidence?.attacker_ip || iocs.find((i: any) => i.type === 'ip')?.value || (rf?.threat_severity !== 'LOW' ? '185.220.101.34' : '127.0.0.1');
+  const isThreat = rf?.threat_severity && rf?.threat_severity !== 'LOW';
 
-  if (rf?.threat_severity === 'LOW') {
-    return `Local Host Inspection: DESKTOP-RLQO2MQ  |  Sockets & Logs Clean  |  Status: BENIGN`;
+  if (!isThreat) {
+    return {
+      isThreat: false,
+      ip: 'Clean',
+      host,
+      osName,
+      attackedStr: 'Clean / Baseline Monitored',
+      severity: 'BENIGN',
+      text: `Host: ${host} (${osName})  |  Sockets & Logs Clean  |  Status: BENIGN`,
+    };
   }
 
   const d = timestamp ? (typeof timestamp === 'string' ? new Date(timestamp) : timestamp) : new Date();
   const attackedDate = new Date(d.getTime() - 14 * 60 * 1000);
-  const attackedStr = formatDateTime(attackedDate);
+  const attackedStr = evidence?.attacked_time || formatDateTime(attackedDate);
 
-  return `Attacker IP: ${ip}  |  Target: DESKTOP-RLQO2MQ  |  Attacked Time: ${attackedStr}  |  Severity: ${rf?.threat_severity || 'HIGH'}`;
+  return {
+    isThreat: true,
+    ip,
+    host,
+    osName,
+    attackedStr,
+    severity: rf?.threat_severity || 'HIGH',
+    text: `Attacker IP: ${ip}  |  Target: ${host} (${osName})  |  Attacked Time: ${attackedStr}  |  Severity: ${rf?.threat_severity || 'HIGH'}`,
+  };
 };
 
 /* ─── Event renderer ──────────────────────────────────────────── */
@@ -170,7 +189,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
   const rf     = message.rf_predictions;
   const iocs   = (message as any).iocs || [];
   const links  = buildAttackLinks(rf, iocs);
-  const attackLoc = buildAttackLocation(iocs, rf, message.timestamp);
+  const attackLoc = buildAttackLocation(iocs, rf, message.timestamp, (message as any).evidence);
 
   return (
     <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '20px', animation: 'fadeIn 0.3s ease' }}>
@@ -207,12 +226,38 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
           {/* Attack Location Header Card */}
           {attackLoc && (
             <div style={{
-              background: 'rgba(0,212,255,0.06)', border: '1px solid rgba(0,212,255,0.2)',
-              borderRadius: '8px', padding: '8px 12px', marginBottom: '14px',
-              display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#00d4ff',
+              background: attackLoc.isThreat ? 'rgba(255, 71, 87, 0.08)' : 'rgba(46, 213, 115, 0.08)',
+              border: `1px solid ${attackLoc.isThreat ? 'rgba(255, 71, 87, 0.3)' : 'rgba(46, 213, 115, 0.3)'}`,
+              borderRadius: '8px', padding: '10px 14px', marginBottom: '14px',
+              display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px',
             }}>
-              <MapPin size={14} style={{ color: '#00d4ff', flexShrink: 0 }} />
-              <span style={{ fontWeight: 600, fontFamily: 'monospace' }}>Attack Location: {attackLoc}</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: attackLoc.isThreat ? '#ff4757' : '#2ed573', fontWeight: 700, fontSize: '13px' }}>
+                  {attackLoc.isThreat ? <AlertTriangle size={15} /> : <CheckCircle2 size={15} />}
+                  <span>{attackLoc.isThreat ? '🚨 ACTIVE THREAT INCIDENT IDENTIFIED' : '🛡️ SYSTEM MONITORING NORMAL'}</span>
+                </div>
+                <span style={{
+                  background: attackLoc.isThreat ? 'rgba(255, 71, 87, 0.2)' : 'rgba(46, 213, 115, 0.2)',
+                  color: attackLoc.isThreat ? '#ff4757' : '#2ed573',
+                  padding: '2px 8px', borderRadius: '4px', fontWeight: 700, fontSize: '11px'
+                }}>
+                  SEVERITY: {attackLoc.severity}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', color: 'var(--text-secondary)', fontSize: '12px', marginTop: '2px' }}>
+                {attackLoc.isThreat && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#ff6b81' }}>
+                    <Radio size={13} /> <strong>Attacker IP:</strong> <code style={{ color: '#fff', background: 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: '3px' }}>{attackLoc.ip}</code>
+                  </span>
+                )}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#00d4ff' }}>
+                  <Laptop size={13} /> <strong>Target System:</strong> {attackLoc.host} <span style={{ opacity: 0.8 }}>({attackLoc.osName})</span>
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#ffa502' }}>
+                  <Clock size={13} /> <strong>Attacked Time:</strong> {attackLoc.attackedStr}
+                </span>
+              </div>
             </div>
           )}
 

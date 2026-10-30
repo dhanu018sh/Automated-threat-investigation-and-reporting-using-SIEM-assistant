@@ -3,6 +3,7 @@ import { Activity, ShieldAlert, CheckCircle, Clock, Play, FileText, MessageSquar
 import Sidebar from '../components/Sidebar';
 import { useNavigate } from 'react-router-dom';
 import RandomForestCard from '../components/RandomForestCard';
+import EndpointTelemetryBar from '../components/EndpointTelemetryBar';
 import { useChatStore } from '../store/chatStore';
 
 interface LiveAlert {
@@ -61,7 +62,9 @@ const Dashboard = () => {
   return (
     <div className="app-container">
       <Sidebar />
-      <main className="main-content" style={{ padding: '2rem', overflowY: 'auto' }}>
+      <main className="main-content" style={{ padding: '0', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+        <EndpointTelemetryBar />
+        <div style={{ padding: '2rem' }}>
         
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -239,6 +242,7 @@ const Dashboard = () => {
               )}
             </tbody>
           </table>
+        </div>
         </div>
 
       </main>

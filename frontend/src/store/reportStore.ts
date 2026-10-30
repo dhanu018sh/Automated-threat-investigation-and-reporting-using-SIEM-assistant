@@ -62,6 +62,7 @@ export const useReportStore = create<ReportState>((set, get) => ({
     }
 
     const qLower = searchQuery.toLowerCase();
+    const host = (typeof localStorage !== 'undefined' ? localStorage.getItem('siem_detected_host') : null) || 'SIEM-ENDPOINT';
 
     // Use RF Predictions as Single Source of Truth
     const severity = rf?.threat_severity || (
@@ -174,7 +175,7 @@ export const useReportStore = create<ReportState>((set, get) => ({
     // 4. Default System Scan (Clean / Benign)
     const report: ReportItem = {
       id: reportId,
-      title: `Local System Scan: DESKTOP-RLQO2MQ`,
+      title: `Local System Scan: ${host}`,
       investigation_id: invId,
       date: new Date().toISOString().replace('T', ' ').substring(0, 16) + ' UTC',
       format: 'TXT',
@@ -183,15 +184,15 @@ export const useReportStore = create<ReportState>((set, get) => ({
       risk_score: 15.0,
       analyst: 'analyst (Copilot Real System Scan)',
       playbook: 'real_system_investigation',
-      summary: `System Inspection executed on host DESKTOP-RLQO2MQ for query: "${cleanQuery}". Inspected active network sockets and Windows Security Log streams. Result: System status CLEAN / BENIGN. No active attack detected.`,
+      summary: `System Inspection executed on host ${host} for query: "${cleanQuery}". Inspected active network sockets and Windows Security Log streams. Result: System status CLEAN / BENIGN. No active attack detected.`,
       mitre_techniques: [
         { technique_id: 'T1078', technique_name: 'Valid Accounts Monitoring', tactic: 'Defense Evasion' }
       ],
       iocs: [
-        { type: 'system', value: 'DESKTOP-RLQO2MQ', context: 'Local Host Clean' }
+        { type: 'system', value: `${host}`, context: 'Local Host Clean' }
       ],
       recommended_actions: [
-        'No remediation required — Local host DESKTOP-RLQO2MQ is clean',
+        `No remediation required — Local host ${host} is clean`,
         'Keep automatic Windows Defender definitions up to date'
       ],
       rf_predictions: rf

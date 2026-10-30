@@ -4,6 +4,7 @@ import logging
 import re
 from datetime import datetime
 from .mitre_mapper import map_findings
+from ..utils.system_detector import get_system_hostname, get_system_os
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +83,7 @@ class ReportGenerator:
         lines.append("=" * 80)
         lines.append(f"Report ID       : REP-{inv_id}")
         lines.append(f"Investigation   : {title}")
+        lines.append(f"Target System   : {get_system_hostname()} ({get_system_os()})")
         lines.append(f"Attacked Date   : {date_str} (Incident Occurrence Window)")
         lines.append(f"Detection Time  : {date_str} (SIEM Automated Trigger)")
         lines.append(f"Playbook        : {pb_name}")
@@ -243,7 +245,7 @@ class ReportGenerator:
 </style></head><body>
 <div class="header">
   <h1>SIEM Assistant &mdash; Threat Investigation Report</h1>
-  <p>Report ID: REP-{inv_id} &nbsp;|&nbsp; {title} &nbsp;|&nbsp; {date_str} &nbsp;|&nbsp; Playbook: {pb_name}</p>
+  <p>Report ID: REP-{inv_id} &nbsp;|&nbsp; {title} &nbsp;|&nbsp; Target: {get_system_hostname()} ({get_system_os()}) &nbsp;|&nbsp; {date_str} &nbsp;|&nbsp; Playbook: {pb_name}</p>
   <span class="badge">Severity: {sev}</span>
 </div>
 <div class="container">
@@ -331,6 +333,7 @@ class ReportGenerator:
             f"|---|---|",
             f"| Report ID | REP-{inv_id} |",
             f"| Title | {title} |",
+            f"| Target System | {get_system_hostname()} ({get_system_os()}) |",
             f"| Date | {date_str} |",
             f"| Playbook | {pb_name} |",
         ]

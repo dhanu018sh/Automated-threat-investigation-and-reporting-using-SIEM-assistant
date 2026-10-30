@@ -114,6 +114,37 @@ export interface WSEvent {
   action?: string;
   risk_level?: string;
   rf_predictions?: RFPrediction;
+  evidence?: ThreatEvidence;
+  system_info?: SystemTelemetry;
+}
+
+export interface SystemTelemetry {
+  hostname: string;
+  os_name: string;
+  os_family: string;
+  os_version: string;
+  architecture: string;
+  local_ip: string;
+  current_time_local: string;
+  current_time_utc: string;
+  timezone: string;
+  cpu_cores: number;
+  active_sockets: number;
+  siem_engine_status: string;
+  threat_model: string;
+}
+
+export interface ThreatEvidence {
+  attacker_ip: string;
+  ip_classification: string;
+  target_host: string;
+  target_os: string;
+  target_ip: string;
+  attacked_time: string;
+  detection_time_local: string;
+  detection_time_utc: string;
+  active_timeframe: string;
+  system_info?: SystemTelemetry;
 }
 
 export interface Message {
@@ -124,6 +155,8 @@ export interface Message {
   events?: WSEvent[];
   rf_predictions?: RFPrediction;
   iocs?: IOC[];
+  evidence?: ThreatEvidence;
+  system_info?: SystemTelemetry;
   isStreaming?: boolean;
 }
 

@@ -35,7 +35,7 @@ ${(report.mitre_techniques || []).map(m => `* [${m.technique_id}] ${m.technique_
 
 4. INDICATORS OF COMPROMISE (IOCs) EXRACTED
 --------------------------------------------------------------------------------
-${(report.iocs || []).map(i => `* [${i.type.toUpperCase()}] ${i.value} (${i.context})`).join('\n') || '* [SYSTEM] DESKTOP-RLQO2MQ Clean'}
+${(report.iocs || []).map(i => `* [${i.type.toUpperCase()}] ${i.value} (${i.context})`).join('\n') || '* [SYSTEM] Local Host Sockets & Event Stream Clean'}
 
 5. RECOMMENDED REMEDIATION & ACTION PLAN
 --------------------------------------------------------------------------------

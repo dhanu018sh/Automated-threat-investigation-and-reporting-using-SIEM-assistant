@@ -25,6 +25,7 @@ from ..playbooks.engine import PlaybookEngine
 from ..enrichment.orchestrator import enrich_multiple
 from ..reporting.generator import report_generator
 from ..reporting.mitre_mapper import map_findings
+from ..utils.system_detector import resolve_threat_evidence, get_full_system_telemetry
 from ..config import settings
 import os
 
@@ -79,48 +80,22 @@ def _first_pb():
 # ────────────────────────────────────────────────────────────────────
 #  HELPER: format the full text response
 # ────────────────────────────────────────────────────────────────────
-def _build_response_text(intent, entities, rf, pb_result, enrichment, report_path):
+def _build_response_text(intent, entities, rf, pb_result, enrichment, report_path, threat_evidence: dict = None):
     lines = []
 
     # ── Header ──────────────────────────────────────────────────────
     lines.append("## SIEM Assistant — Real-Time Threat Investigation Complete\n")
 
     # ── Attacker IP, Target & Timestamp Evidence ────────────────────
-    extracted_ips = entities.get("ip_addresses", [])
-    if not extracted_ips and pb_result and pb_result.iocs:
-        extracted_ips = [i["value"] for i in pb_result.iocs if i.get("type") == "ip"]
-
-    attacker_ip = extracted_ips[0] if extracted_ips else ("185.220.101.34" if rf.get("threat_severity") != "LOW" else "Clean / Internal Sockets Only")
-    now_dt = datetime.utcnow()
-    now_utc = now_dt.strftime("%d %b %Y, %H:%M:%S UTC")
-
-    # Determine Attacked Date & Time
-    dates = entities.get("dates", [])
-    times = entities.get("times", [])
-    timeframes = entities.get("timeframes", [])
-
-    if dates or times:
-        date_part = dates[0] if dates else now_dt.strftime("%d %b %Y")
-        time_part = times[0] if times else (now_dt - timedelta(minutes=14, seconds=22)).strftime("%H:%M:%S UTC")
-        attacked_time_str = f"{date_part}, {time_part}"
-    elif timeframes:
-        tf = timeframes[0]
-        attacked_dt = now_dt - timedelta(minutes=14, seconds=22)
-        attacked_time_str = f"{attacked_dt.strftime('%d %b %Y, %H:%M:%S UTC')} ({tf})"
-    elif rf.get("threat_severity") != "LOW":
-        attacked_dt = now_dt - timedelta(minutes=14, seconds=22)
-        attacked_time_str = attacked_dt.strftime("%d %b %Y, %H:%M:%S UTC")
-    else:
-        attacked_time_str = f"{now_utc} (Clean / Baseline Normal)"
+    ev = threat_evidence or resolve_threat_evidence(entities, rf, pb_result)
 
     lines.append("### 🎯 Threat Incident Evidence & Time Metadata")
-    lines.append(f"- **Attacker Source IP Address**: `{attacker_ip}`" + (" (External Threat IP)" if attacker_ip != "Clean / Internal Sockets Only" else ""))
-    lines.append(f"- **Target System Host**: `DESKTOP-RLQO2MQ` (Windows System)")
-    lines.append(f"- **Attacked / Incident Date & Time**: `{attacked_time_str}`")
-    lines.append(f"- **Attack Detection Date & Time**: `{now_utc}`")
-    if timeframes or rf.get("threat_severity") != "LOW":
-        tf_display = timeframes[0] if timeframes else "Past 24 Hours (Active Incident Window)"
-        lines.append(f"- **Attack Timeframe Window**: `{tf_display}`")
+    lines.append(f"- **Attacker Source IP Address**: `{ev['attacker_ip']}` ({ev['ip_classification']})")
+    lines.append(f"- **Target System Host**: `{ev['target_host']}` ({ev['target_os']})")
+    lines.append(f"- **Target Endpoint IP**: `{ev['target_ip']}`")
+    lines.append(f"- **Attacked / Incident Date & Time**: `{ev['attacked_time']}`")
+    lines.append(f"- **Attack Detection Date & Time**: `{ev['detection_time_local']}  |  {ev['detection_time_utc']}`")
+    lines.append(f"- **Attack Timeframe Window**: `{ev['active_timeframe']}`")
     lines.append("")
 
     # ── Objective A: NLP ────────────────────────────────────────────
@@ -289,7 +264,15 @@ async def chat_message(req: MessageRequest):
         pass
 
     # ── Objective D: Context-Aware response ─────────────────────────
-    response_text = _build_response_text(intent, entities, rf_analysis, pb_result, enrichment, report_path)
+    threat_ev = resolve_threat_evidence(entities, rf_analysis, pb_result)
+    response_text = _build_response_text(intent, entities, rf_analysis, pb_result, enrichment, report_path, threat_evidence=threat_ev)
+
+    attacker_ip = threat_ev["attacker_ip"]
+    iocs_returned = (pb_result.iocs if pb_result and pb_result.iocs else [
+        {"type": "ip", "value": attacker_ip, "context": threat_ev["ip_classification"]}
+        if rf_analysis.get("threat_severity") != "LOW" else
+        {"type": "system", "value": threat_ev["target_host"], "context": "Local Host Clean"}
+    ])
 
     return {
         "intent":        intent,
@@ -298,7 +281,9 @@ async def chat_message(req: MessageRequest):
         "rf_predictions": rf_analysis,
         "report_path":   report_path,
         "playbook":      getattr(pb_result, "playbook_name", None),
-        "iocs":          (pb_result.iocs if pb_result and pb_result.iocs else [{"type": "ip", "value": entities.get("ip_addresses", ["185.220.101.34"])[0] if rf_analysis.get("threat_severity") != "LOW" else "127.0.0.1", "context": "Attacker Source IP" if rf_analysis.get("threat_severity") != "LOW" else "Local Host Clean"}]),
+        "iocs":          iocs_returned,
+        "evidence":      threat_ev,
+        "system_info":   threat_ev["system_info"],
         "mitre":         [{"id": getattr(t,"id",""), "name": getattr(t,"name",""), "tactic": getattr(t,"tactic","")} if not isinstance(t, dict) else t for t in (pb_result.mitre_techniques if pb_result else [])],
         "enrichment":    enrichment,
         "events": [
@@ -463,14 +448,17 @@ async def websocket_endpoint(websocket: WebSocket, conversation_id: str):
                 pass
 
             # ── Step 8: Final Response ────────────────────────────
-            response_text = _build_response_text(intent, entities, rf_analysis, pb_result, enrichment, report_path)
+            threat_ev = resolve_threat_evidence(entities, rf_analysis, pb_result)
+            response_text = _build_response_text(intent, entities, rf_analysis, pb_result, enrichment, report_path, threat_evidence=threat_ev)
 
             await websocket.send_text(json.dumps({
                 "type":          "final_response",
                 "message":       response_text,
                 "rf_predictions": rf_analysis,
                 "report_path":   report_path,
-                "iocs":          pb_result.iocs if pb_result else [],
+                "iocs":          pb_result.iocs if pb_result else [{"type": "ip", "value": threat_ev["attacker_ip"], "context": threat_ev["ip_classification"]}],
+                "evidence":      threat_ev,
+                "system_info":   threat_ev["system_info"],
             }))
 
     except WebSocketDisconnect:

@@ -32,6 +32,8 @@ export const useWebSocket = (conversationId: string | null) => {
               timestamp: new Date().toISOString(),
               rf_predictions: data.rf_predictions,
               iocs: (data as any).iocs || [],
+              evidence: (data as any).evidence,
+              system_info: (data as any).system_info,
             });
             setLoading(false);
           }
@@ -86,6 +88,8 @@ export const useWebSocket = (conversationId: string | null) => {
         events: res.events || [],
         rf_predictions: res.rf_predictions,
         iocs: res.iocs || [],
+        evidence: res.evidence,
+        system_info: res.system_info,
       };
       addMessage(conversationId, assistantMsg);
 
@@ -102,6 +106,7 @@ export const useWebSocket = (conversationId: string | null) => {
         events: fallback.events,
         rf_predictions: fallback.rf_predictions,
         iocs: fallback.iocs,
+        evidence: fallback.evidence,
       });
       useReportStore.getState().generateReportFromSearch(content, fallback.rf_predictions);
     } finally {

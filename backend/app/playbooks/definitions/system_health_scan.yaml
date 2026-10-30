@@ -19,6 +19,6 @@ nodes:
     type: generate_finding
     name: System Health Risk Assessment
     depends_on: [check_windows_event_log]
-    finding_template: "Real System Health Inspection executed on host DESKTOP-RLQO2MQ. Scanned active network sockets and Windows Security Log streams. Status: BENIGN / CLEAN. No active malicious attack detected."
+    finding_template: "Real System Health Inspection executed on local host system. Scanned active network sockets and Windows Security Log streams. Status: BENIGN / CLEAN. No active malicious attack detected."
     severity: LOW
     risk_score: 15.0

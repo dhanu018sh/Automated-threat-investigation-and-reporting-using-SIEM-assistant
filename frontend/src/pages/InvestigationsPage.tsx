@@ -64,16 +64,18 @@ const InvestigationsPage = () => {
       const rf = lastAssistant?.rf_predictions;
       const iocs = lastAssistant?.iocs || [];
 
-      // Extract IPs for attack location
+      // Extract dynamic host & IPs for attack location
+      const host = (lastAssistant as any)?.evidence?.target_host || localStorage.getItem('siem_detected_host') || 'Local Host';
+      const osName = (lastAssistant as any)?.evidence?.target_os || localStorage.getItem('siem_detected_os') || 'Windows System';
       const ips = iocs.filter((i: any) => i.type === 'ip').map((i: any) => i.value);
-      const mainIp = ips[0] || (rf?.threat_severity !== 'LOW' ? '185.220.101.34' : '127.0.0.1');
+      const mainIp = (lastAssistant as any)?.evidence?.attacker_ip || ips[0] || (rf?.threat_severity !== 'LOW' ? '185.220.101.34' : '127.0.0.1');
       const d = c.created_at ? new Date(c.created_at) : new Date();
       const attackedDate = new Date(d.getTime() - 14 * 60 * 1000);
-      const attackedStr = formatDateTime(attackedDate.toISOString());
+      const attackedStr = (lastAssistant as any)?.evidence?.attacked_time || formatDateTime(attackedDate.toISOString());
 
       const attackLoc = rf?.threat_severity === 'LOW'
-        ? `Clean Host Inspection  |  Local Host: DESKTOP-RLQO2MQ`
-        : `Attacker IP: ${mainIp}  |  Attacked Time: ${attackedStr}`;
+        ? `Clean Host Inspection  |  Host: ${host} (${osName})`
+        : `Attacker IP: ${mainIp}  |  Target Host: ${host} (${osName})  |  Attacked Time: ${attackedStr}`;
 
       const links: { label: string; url: string }[] = [];
       if (rf?.attacking_vulnerability) {
