@@ -132,7 +132,8 @@ const Dashboard = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {liveAlerts.slice(0, 4).map((alert) => {
                 const ipMatch = alert.raw_log.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/);
-                const attackerIp = ipMatch ? ipMatch[0] : '185.220.101.34';
+                const detectedIp = (typeof localStorage !== 'undefined' ? localStorage.getItem('siem_detected_ip') : null) || '10.167.239.5';
+                const attackerIp = ipMatch ? ipMatch[0] : detectedIp;
                 const formattedTime = new Date(alert.timestamp).toLocaleString('en-GB', {
                   day: '2-digit', month: 'short', year: 'numeric',
                   hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true

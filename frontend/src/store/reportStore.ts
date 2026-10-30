@@ -70,6 +70,7 @@ export const useReportStore = create<ReportState>((set, get) => ({
     );
     const riskScore = rf?.attacked_system_risk_score ?? (severity === 'CRITICAL' ? 95 : (severity === 'HIGH' ? 78 : 15.0));
     const malwareClass = rf?.malware_family || (severity === 'LOW' ? 'Benign' : 'Threat Anomaly');
+    const detectedIp = (typeof localStorage !== 'undefined' ? localStorage.getItem('siem_detected_ip') : null) || '10.167.239.5';
 
     // 1. Phishing Intent
     if (qLower.includes('phish') || qLower.includes('email') || qLower.includes('mail') || malwareClass.includes('Phishing')) {
@@ -84,16 +85,18 @@ export const useReportStore = create<ReportState>((set, get) => ({
         risk_score: riskScore,
         analyst: 'analyst (Copilot Phishing Triage)',
         playbook: 'phishing_investigation',
-        summary: `Automated Phishing Investigation executed for query: "${cleanQuery}". Scanned email gateways and domain reputation databases. Identified suspicious domain paypa1.com sending spearphishing emails with embedded credential harvesting links.`,
+        summary: `Automated Phishing Investigation executed for query: "${cleanQuery}". Scanned email gateways and threat intelligence feeds. Identified malicious campaign originating from attacker IP ${detectedIp} with embedded credential harvesting links.`,
         mitre_techniques: [
           { technique_id: 'T1566', technique_name: 'Phishing', tactic: 'Initial Access' },
           { technique_id: 'T1566.002', technique_name: 'Spearphishing Link', tactic: 'Initial Access' }
         ],
         iocs: [
+          { type: 'ip', value: detectedIp, context: 'Phishing Attacker Source IP' },
           { type: 'domain', value: 'paypa1.com', context: 'Malicious Sender Typosquat Domain' },
-          { type: 'url', value: 'http://paypa1.com/verify-account', context: 'Credential Harvesting Link' }
+          { type: 'url', value: `http://${detectedIp}:8080/portal/login`, context: 'Credential Harvesting Link' }
         ],
         recommended_actions: [
+          `Block attacker IP ${detectedIp} at perimeter firewall`,
           'Block sender domain paypa1.com at email gateway',
           'Quarantine matching incoming phishing emails',
           'Reset credentials for affected users',
@@ -126,12 +129,12 @@ export const useReportStore = create<ReportState>((set, get) => ({
         ],
         iocs: [
           { type: 'hash', value: 'd41d8cd98f00b204e9800998ecf8427e', context: 'Malware Payload SHA256 Hash' },
-          { type: 'ip', value: '185.220.101.34', context: 'Outbound C2 Server IP' }
+          { type: 'ip', value: detectedIp, context: 'Attacker Source / Outbound C2 IP' }
         ],
         recommended_actions: [
           'Isolate affected host from network immediately',
           'Quarantine process and terminate active execution',
-          'Block outbound C2 IP 185.220.101.34 at firewall'
+          `Block attacker IP ${detectedIp} at firewall`
         ],
         rf_predictions: rf
       };

@@ -68,7 +68,8 @@ const InvestigationsPage = () => {
       const host = (lastAssistant as any)?.evidence?.target_host || localStorage.getItem('siem_detected_host') || 'Local Host';
       const osName = (lastAssistant as any)?.evidence?.target_os || localStorage.getItem('siem_detected_os') || 'Windows System';
       const ips = iocs.filter((i: any) => i.type === 'ip').map((i: any) => i.value);
-      const mainIp = (lastAssistant as any)?.evidence?.attacker_ip || ips[0] || (rf?.threat_severity !== 'LOW' ? '185.220.101.34' : '127.0.0.1');
+      const detectedIp = localStorage.getItem('siem_detected_ip') || '10.167.239.5';
+      const mainIp = (lastAssistant as any)?.evidence?.attacker_ip || ips[0] || (rf?.threat_severity !== 'LOW' ? detectedIp : '127.0.0.1');
       const d = c.created_at ? new Date(c.created_at) : new Date();
       const attackedDate = new Date(d.getTime() - 14 * 60 * 1000);
       const attackedStr = (lastAssistant as any)?.evidence?.attacked_time || formatDateTime(attackedDate.toISOString());

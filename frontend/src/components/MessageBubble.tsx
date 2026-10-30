@@ -64,7 +64,8 @@ const buildAttackLinks = (rf: any, iocs: any[]) => {
 const buildAttackLocation = (iocs: any[], rf: any, timestamp?: string | Date, evidence?: any) => {
   const host = evidence?.target_host || (typeof localStorage !== 'undefined' ? localStorage.getItem('siem_detected_host') : null) || 'Local Host';
   const osName = evidence?.target_os || (typeof localStorage !== 'undefined' ? localStorage.getItem('siem_detected_os') : null) || 'Windows System';
-  const ip = evidence?.attacker_ip || iocs.find((i: any) => i.type === 'ip')?.value || (rf?.threat_severity !== 'LOW' ? '185.220.101.34' : '127.0.0.1');
+  const detectedIp = (typeof localStorage !== 'undefined' ? localStorage.getItem('siem_detected_ip') : null) || '10.167.239.5';
+  const ip = evidence?.attacker_ip || iocs.find((i: any) => i.type === 'ip')?.value || (rf?.threat_severity !== 'LOW' ? detectedIp : '127.0.0.1');
   const isThreat = rf?.threat_severity && rf?.threat_severity !== 'LOW';
 
   if (!isThreat) {

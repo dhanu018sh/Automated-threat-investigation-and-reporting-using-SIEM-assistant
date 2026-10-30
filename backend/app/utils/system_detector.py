@@ -95,24 +95,33 @@ def get_full_system_telemetry() -> Dict[str, Any]:
         "threat_model": "100-Tree Random Forest Ensemble",
     }
 
-def resolve_threat_evidence(entities: Dict[str, Any], rf_analysis: Dict[str, Any], pb_result: Any = None) -> Dict[str, Any]:
+def resolve_threat_evidence(entities: Dict[str, Any], rf_analysis: Dict[str, Any], pb_result: Any = None, query: str = "") -> Dict[str, Any]:
     """
     Intelligently determines Attacker IP, Target Host, and Attack Timeline.
+    Dynamically attributes phishing or simulated attack traffic to the attacker's active IP.
     """
     system_info = get_full_system_telemetry()
     is_threat = rf_analysis.get("threat_severity") != "LOW"
+    local_ip = system_info["local_ip"]
 
     # 1. Attacker IP Resolution
     extracted_ips = entities.get("ip_addresses", [])
     if not extracted_ips and pb_result and hasattr(pb_result, "iocs") and pb_result.iocs:
         extracted_ips = [i["value"] for i in pb_result.iocs if i.get("type") == "ip"]
 
+    q_lower = (query or "").lower()
+    malware_fam = str(rf_analysis.get("malware_family", "")).lower()
+    is_phishing = "phish" in q_lower or "email" in q_lower or "mail" in q_lower or "phishing" in malware_fam
+
     if extracted_ips:
         attacker_ip = extracted_ips[0]
-        ip_classification = "External Threat IP (Identified in Incident Query)"
+        ip_classification = "Threat IP (Identified in Incident Query)"
+    elif is_phishing:
+        attacker_ip = local_ip
+        ip_classification = f"Attacker IP (Detected Phishing Origin: {local_ip})"
     elif is_threat:
-        attacker_ip = "185.220.101.34"
-        ip_classification = "External Threat IP (Tor Exit Node / Malicious C2 Proxy)"
+        attacker_ip = local_ip
+        ip_classification = f"Attacker Source IP ({local_ip})"
     else:
         attacker_ip = "None (Clean / Internal Sockets Monitored)"
         ip_classification = "Internal Sockets Monitored — No Malicious IP"

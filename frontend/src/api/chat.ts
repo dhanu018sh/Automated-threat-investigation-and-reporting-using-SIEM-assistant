@@ -23,7 +23,8 @@ export const getClientSystemInfo = (): { hostname: string; osName: string } => {
 
 export const generateRichInvestigationResponse = (message: string) => {
   const ipMatch = message.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/);
-  const attackerIp = ipMatch ? ipMatch[0] : '185.220.101.34';
+  const detectedIp = (typeof localStorage !== 'undefined' ? localStorage.getItem('siem_detected_ip') : null) || '10.167.239.5';
+  const attackerIp = ipMatch ? ipMatch[0] : detectedIp;
   const now = new Date();
   const attackedDate = new Date(now.getTime() - 14 * 60 * 1000);
   const sys = getClientSystemInfo();
@@ -152,6 +153,9 @@ export const chatApi = {
       if (res.data?.system_info?.hostname && typeof localStorage !== 'undefined') {
         localStorage.setItem('siem_detected_host', res.data.system_info.hostname);
         localStorage.setItem('siem_detected_os', res.data.system_info.os_name);
+        if (res.data.system_info.local_ip) {
+          localStorage.setItem('siem_detected_ip', res.data.system_info.local_ip);
+        }
       }
       return res.data;
     } catch (err: any) {
@@ -165,6 +169,9 @@ export const chatApi = {
       if (res.data?.hostname && typeof localStorage !== 'undefined') {
         localStorage.setItem('siem_detected_host', res.data.hostname);
         localStorage.setItem('siem_detected_os', res.data.os_name);
+        if (res.data.local_ip) {
+          localStorage.setItem('siem_detected_ip', res.data.local_ip);
+        }
       }
       return res.data;
     } catch {

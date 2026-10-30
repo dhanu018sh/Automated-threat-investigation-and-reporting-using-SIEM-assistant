@@ -7,7 +7,8 @@ interface EnrichmentCardProps {
 
 export const EnrichmentCard: React.FC<EnrichmentCardProps> = ({ data }) => {
   const type = data?.type?.toUpperCase() || 'IP';
-  const val = data?.value || '185.220.101.34';
+  const detectedIp = (typeof localStorage !== 'undefined' ? localStorage.getItem('siem_detected_ip') : null) || '10.167.239.5';
+  const val = data?.value || detectedIp;
   const risk = data?.risk_score ?? 85;
   const isHighRisk = risk > 60;
 

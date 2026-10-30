@@ -80,14 +80,14 @@ def _first_pb():
 # ────────────────────────────────────────────────────────────────────
 #  HELPER: format the full text response
 # ────────────────────────────────────────────────────────────────────
-def _build_response_text(intent, entities, rf, pb_result, enrichment, report_path, threat_evidence: dict = None):
+def _build_response_text(intent, entities, rf, pb_result, enrichment, report_path, threat_evidence: dict = None, query: str = ""):
     lines = []
 
     # ── Header ──────────────────────────────────────────────────────
     lines.append("## SIEM Assistant — Real-Time Threat Investigation Complete\n")
 
     # ── Attacker IP, Target & Timestamp Evidence ────────────────────
-    ev = threat_evidence or resolve_threat_evidence(entities, rf, pb_result)
+    ev = threat_evidence or resolve_threat_evidence(entities, rf, pb_result, query=query)
 
     lines.append("### 🎯 Threat Incident Evidence & Time Metadata")
     lines.append(f"- **Attacker Source IP Address**: `{ev['attacker_ip']}` ({ev['ip_classification']})")
@@ -264,8 +264,8 @@ async def chat_message(req: MessageRequest):
         pass
 
     # ── Objective D: Context-Aware response ─────────────────────────
-    threat_ev = resolve_threat_evidence(entities, rf_analysis, pb_result)
-    response_text = _build_response_text(intent, entities, rf_analysis, pb_result, enrichment, report_path, threat_evidence=threat_ev)
+    threat_ev = resolve_threat_evidence(entities, rf_analysis, pb_result, query=resolved_msg)
+    response_text = _build_response_text(intent, entities, rf_analysis, pb_result, enrichment, report_path, threat_evidence=threat_ev, query=resolved_msg)
 
     attacker_ip = threat_ev["attacker_ip"]
     iocs_returned = (pb_result.iocs if pb_result and pb_result.iocs else [
@@ -448,8 +448,8 @@ async def websocket_endpoint(websocket: WebSocket, conversation_id: str):
                 pass
 
             # ── Step 8: Final Response ────────────────────────────
-            threat_ev = resolve_threat_evidence(entities, rf_analysis, pb_result)
-            response_text = _build_response_text(intent, entities, rf_analysis, pb_result, enrichment, report_path, threat_evidence=threat_ev)
+            threat_ev = resolve_threat_evidence(entities, rf_analysis, pb_result, query=resolved)
+            response_text = _build_response_text(intent, entities, rf_analysis, pb_result, enrichment, report_path, threat_evidence=threat_ev, query=resolved)
 
             await websocket.send_text(json.dumps({
                 "type":          "final_response",
