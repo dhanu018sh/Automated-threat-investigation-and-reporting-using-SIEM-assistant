@@ -43,3 +43,4 @@ async def get_active_sockets(limit: int = 25) -> Dict[str, Any]:
         "total_sockets": len(sockets),
         "sockets": sockets,
     }
+

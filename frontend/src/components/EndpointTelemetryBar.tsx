@@ -256,3 +256,4 @@ const EndpointTelemetryBar: React.FC = () => {
 };
 
 export default EndpointTelemetryBar;
+

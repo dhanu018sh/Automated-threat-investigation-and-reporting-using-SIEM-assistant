@@ -155,3 +155,4 @@ def resolve_threat_evidence(entities: Dict[str, Any], rf_analysis: Dict[str, Any
         "active_timeframe": timeframes[0] if timeframes else "Past 24 Hours (Active Incident Window)",
         "system_info": system_info,
     }
+
